@@ -1,10 +1,14 @@
 import pandas as pd
 import joblib
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder
+from fastapi import FastAPI
+
 
 dt_model = joblib.load("backend/models/DecisionTreeRegressor.pkl")
 rf_model = joblib.load("backend/models/RandomForestRegressor.pkl")
 xgb_model = joblib.load("backend/models/XGBRegressor.pkl")
+ohe = joblib.load("backend/models/ohe_encoder.pkl")
+
 
 def create_item_type(data_frame):
     data_frame['Item_Type'] = data_frame['Item_Identifier'].str[:2]
@@ -56,9 +60,43 @@ def correct_item_fat_content(data_frame):
 
 def preprocess_input(data: dict):
     data_frame = pd.DataFrame([data])
+
+    # Apply preprocessing steps
     data_frame = create_item_type(data_frame)
     data_frame = impute_item_weight(data_frame)
     data_frame = impute_outlet_size(data_frame)
     data_frame = standardize_item_fat_content(data_frame)
     data_frame = correct_item_fat_content(data_frame)
-    return data_frame
+
+    # Separate numerical and categorical features
+    num_feats = data_frame[["Item_MRP", "Outlet_Establishment_Year", "Item_Weight", "Item_Visibility"]].copy()
+    cat_feats = data_frame.drop(columns=num_feats.columns, errors="ignore")  # Drop numerical columns from categorical set
+
+    # Apply One-Hot Encoding
+    X_cat_ohe = pd.DataFrame(ohe.transform(cat_feats).toarray(), columns=ohe.get_feature_names_out())
+
+    # Combine numerical and categorical features
+    X_final = pd.concat([num_feats.reset_index(drop=True), X_cat_ohe], axis=1)
+
+    # Ensure correct feature order
+    train_columns = joblib.load("backend/models/train_columns.pkl")  # Load saved feature names
+    X_final = X_final.reindex(columns=train_columns, fill_value=0)  # Fill missing columns with 0
+
+    return X_final
+
+
+def predict(data: dict, model_name: str):
+    data_frame = preprocess_input(data)
+
+    models = {
+        "DecisionTreeRegressor": dt_model,
+        "RandomForestRegressor": rf_model,
+        "XGBRegressor": xgb_model
+    }
+
+    if model_name not in models:
+        raise ValueError("Invalid model name. Choose from DecisionTreeRegressor, RandomForestRegressor, XGBRegressor.")
+
+    model = models[model_name]
+    prediction = model.predict(data_frame)
+    return {"prediction": prediction.tolist()}
