@@ -19,3 +19,5 @@ uvicorn
 pandas
 scikit-learn
 joblib
+pydantic
+requests
