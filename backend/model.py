@@ -1,8 +1,6 @@
 import os
 import pandas as pd
 import joblib
-from sklearn.preprocessing import OneHotEncoder, LabelEncoder
-from fastapi import FastAPI
 
 # Define the model directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Get backend/ directory
@@ -99,8 +97,6 @@ def preprocess_input(data: dict):
 
     # Combine numerical and categorical features
     X_final = pd.concat([num_feats.reset_index(drop=True), X_cat_ohe], axis=1)
-
-    print("Final processed data columns:", X_final.columns.tolist())  # Debugging line
 
     # Ensure correct feature order
     X_final = X_final.reindex(columns=train_columns, fill_value=0)
