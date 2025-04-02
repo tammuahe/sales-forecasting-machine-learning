@@ -1,0 +1,18 @@
+# Ignore node_modules and build files (Frontend)
+node_modules
+build
+dist
+
+# Ignore Python virtual environment (Backend)
+venv
+__pycache__
+
+# Ignore Git & Docker files
+.git
+.gitignore
+.dockerignore
+
+# Ignore system files
+*.log
+.DS_Store
+.env
